@@ -27,3 +27,8 @@ bin/
 
 ### Mac OS ###
 .DS_Storesrc/practice/
+
+src/practice/
+.idea/
+
+
