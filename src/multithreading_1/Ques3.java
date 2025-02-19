@@ -14,7 +14,7 @@ public class Ques3 {
 
 }
 class VolatileExample extends Thread{
-    volatile boolean start = true;
+    private volatile boolean start = true;
 
     @Override
     public void run() {
