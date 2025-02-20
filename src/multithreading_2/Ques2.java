@@ -1,59 +1,24 @@
 package multithreading_2;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-//Improve the code written in Basics of Multi Threading Part 1 exercise question 4
-// to handle the deadlock using reentract lock.
 public class Ques2 {
     public static void main(String[] args) {
-//        Object resource1 = new Object();
-//        Object resource2 = new Object();
-
         ReentrantLock resourcelock1 = new ReentrantLock();
         ReentrantLock resourcelock2 = new ReentrantLock();
 
-        Thread t1 = new Thread(() -> {
-            if(resourcelock1.tryLock()) {
-                 try {
-                     System.out.println("Utilizing Resource 1 in " + Thread.currentThread().getName());
-                     System.out.println("Waiting for resource 2 in " + Thread.currentThread().getName());
-                     if (resourcelock2.tryLock()) {
-                         System.out.println("utilizing Resource 2 in " + Thread.currentThread().getName());
-                         resourcelock2.unlock();
-                     }else{
-                         System.out.println(Thread.currentThread().getName() + " could not acquire resource 2");
-                     }
-                 }finally {
-                     resourcelock1.unlock();
-                 }
-            }else{
-                System.out.println(Thread.currentThread().getName() +  " could not acquire resource 1");
-            }
-        });
+        Runnable task1 = () -> acquireLocks(resourcelock1, resourcelock2, "t1");
+        Runnable task2 = () -> acquireLocks(resourcelock2, resourcelock1, "t2");
+
+        Thread t1 = new Thread(task1);
         t1.setName("t1");
-
-        Thread t2 = new Thread(() -> {
-            if(resourcelock2.tryLock()) {
-                try {
-                    System.out.println("Utilizing Resource 2 in " + Thread.currentThread().getName());
-                    System.out.println("Waiting for resource 1 in " + Thread.currentThread().getName());
-                    if (resourcelock1.tryLock()) {
-                        System.out.println("utilizing Resource 1 in " + Thread.currentThread().getName());
-                        resourcelock1.unlock();
-                    }else{
-                        System.out.println(Thread.currentThread().getName() + " could not acquire resource 1");
-                    }
-                }finally {
-                    resourcelock2.unlock();
-                }
-            }else {
-                System.out.println(Thread.currentThread().getName() + " could not acquire resource 2");
-            }
-        });
-
+        Thread t2 = new Thread(task2);
         t2.setName("t2");
+
         t1.start();
         t2.start();
+
         try {
             t1.join();
             t2.join();
@@ -61,5 +26,32 @@ public class Ques2 {
             throw new RuntimeException(e);
         }
     }
-}
 
+    private static void acquireLocks(ReentrantLock lock1, ReentrantLock lock2, String threadName) {
+        while (true) {
+            try {
+                boolean acquiredLock1 = lock1.tryLock(500, TimeUnit.MILLISECONDS);
+                boolean acquiredLock2 = lock2.tryLock(500, TimeUnit.MILLISECONDS);
+
+                if (acquiredLock1 && acquiredLock2) {
+                    try {
+                        System.out.println(threadName + " both locks aquired");
+                        System.out.println("working...");
+                        Thread.sleep(1000);
+                        return;
+                    } finally {
+                        lock2.unlock();
+                        lock1.unlock();
+                        System.out.println(threadName + " work finished releasing both locks.");
+                    }
+                }
+
+                if (acquiredLock1) lock1.unlock();
+                if (acquiredLock2) lock2.unlock();
+
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+}
